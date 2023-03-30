@@ -16,19 +16,16 @@ interface IKernel {
 /// @dev    GOERLI
 contract Deploy is BatchScript {
 
-  address localAddr = 0xefffab0Aa61828c4af926E039ee754e3edE10dAc; // Goerli bridge
-  address remoteAddr = 0xB01432c01A9128e3d1d70583eA873477B2a1f5e1; // Arb goerli bridge
+  address localBridgeAddr = 0xefffab0Aa61828c4af926E039ee754e3edE10dAc; // Goerli bridge
+  address remoteBridgeAddr = 0xB01432c01A9128e3d1d70583eA873477B2a1f5e1; // Arb goerli bridge
   
   /// @notice The main script entrypoint
-  /// @return greeter The deployed contract
-  function run() external returns (Greeter greeter) {
+  function run() external {
     vm.startBroadcast();
-    greeter = new Greeter("GM");
-    vm.stopBroadcast();
 
     address safe = vm.envAddress("MULTISIG");
     IKernel kernel = IKernel(vm.envAddress("GOERLI_KERNEL"));
-    ICrossChainBridge bridge = ICrossChainBridge(localAddr);
+    ICrossChainBridge bridge = ICrossChainBridge(localBridgeAddr);
 
     // Start batch
     // Install on kernel
@@ -37,12 +34,13 @@ contract Deploy is BatchScript {
     addToBatch(address(kernel), 0, txn1);  
 
     // Call some initialize function on the contract
-    // bridge.setTrustedRemote(vm.envUint("CHAIN_ID"), abi.encodePacked(remoteAddr, localAddr));
-    bytes memory txn2 = abi.encodeWithSignature("setTrustedRemote(uint16,bytes)", vm.envUint("CHAIN_ID"), abi.encodePacked(remoteAddr, localAddr));
+    // bridge.setTrustedRemote(vm.envUint("CHAIN_ID"), abi.encodePacked(remoteBridgeAddr, localBridgeAddr));
+    bytes memory txn2 = abi.encodeWithSignature("setTrustedRemote(uint16,bytes)", vm.envUint("CHAIN_ID"), abi.encodePacked(remoteBridgeAddr, localBridgeAddr));
     addToBatch(address(bridge), 0, txn2);    
-
 
     // Execute batch
     executeBatch(safe);
+
+    vm.stopBroadcast();
   }
 }
