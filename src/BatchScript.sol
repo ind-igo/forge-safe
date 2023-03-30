@@ -86,7 +86,7 @@ abstract contract BatchScript is Script {
         encodedTxns.push(abi.encodePacked(Operation.CALL, to_, value_, data_.length, data_));
     }
 
-    // Computes the hash of a Safe transaction.
+    // Computes the EIP712 hash of a Safe transaction.
     // Look at https://github.com/safe-global/safe-eth-py/blob/174053920e0717cc9924405e524012c5f953cd8f/gnosis/safe/safe_tx.py#L186
     // and https://github.com/safe-global/safe-eth-py/blob/master/gnosis/eth/eip712/__init__.py
     function getTransactionHash(address safe_, Batch memory batch_) internal returns (bytes32) {
@@ -169,12 +169,12 @@ abstract contract BatchScript is Script {
         // Create hash of the transaction with EIP712
     
         return keccak256(abi.encodePacked(
-                0x1901
+                0x1901,
                 keccak256(
                     abi.encode(
                         keccak256("EIP712Domain(address verifyingContract, uint256 chainId)"),
                         safe_,
-                        vm.envUint("CHAIN_ID"),
+                        vm.envUint("CHAIN_ID")
                     )
                 ),
                 keccak256(
@@ -228,7 +228,7 @@ abstract contract BatchScript is Script {
             revert(); // TODO
         }
     }
-    
+
     function getNonce(address safe_) internal returns (uint256) {
         string memory endpoint = string.concat(SAFE_API_BASE_URL, vm.toString(safe_));
         (uint256 status, bytes memory data) = endpoint.get();
@@ -252,7 +252,7 @@ abstract contract BatchScript is Script {
         batch.data = abi.encodeWithSignature("multiSend(bytes)", abi.encode(encodedTxns));
 
         // Get the gas estimate for the batch
-        batch.safeTxGas = estimateBatchGas(safe_, batch.data);
+        batch.safeTxGas = estimateBatchGas(safe_, batch);
 
         // Get the gas price
         (batch.baseGas, batch.gasPrice) = getGasPrice();
