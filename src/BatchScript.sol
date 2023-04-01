@@ -92,6 +92,8 @@ abstract contract BatchScript is Script {
         _sendBatch(safe_, batch);
     }
 
+    // Internal functions
+
     // Encodes the stored encoded transactions into a single Multisend transaction
     function _createBatch(address safe_) internal returns (Batch memory batch) {
         // Set initial batch fields
@@ -136,7 +138,7 @@ abstract contract BatchScript is Script {
         (uint256 status, bytes memory data) = endpoint.post(_getHeaders(), payload);
 
         if (status == 201) console2.log("Batch sent successfully");
-        else revert("Send batch failed!"); // TODO
+        else revert("Send batch failed!");
     }
 
 
@@ -268,7 +270,7 @@ abstract contract BatchScript is Script {
             string memory result = abi.decode(data, (string));
             return result.readUint("safeTxGas");
         } else {
-            revert(); // TODO
+            revert("Gas estimation call failed!");
         }
     }
 
@@ -279,7 +281,7 @@ abstract contract BatchScript is Script {
             string memory result = abi.decode(data, (string));
             return (result.readUint("suggestBaseFee"), result.readUint("FastGasPrice"));
         } else {
-            revert(); // TODO
+            revert("Gas price call failed!");
         }
     }
 
@@ -290,23 +292,19 @@ abstract contract BatchScript is Script {
             string memory result = abi.decode(data, (string));
             return result.readUint("nonce");
         } else {
-            revert(); // TODO
+            revert("Get nonce failed!");
         }
     }
 
-
-
-    // Internal functions
-
-    function _getSafeAPIEndpoint(address safe_) internal returns(string memory) {
+    function _getSafeAPIEndpoint(address safe_) internal pure returns(string memory) {
         return string.concat(SAFE_API_BASE_URL, vm.toString(safe_), SAFE_API_MULTISIG_SEND);
     }
 
-    function _getEstimateGasEndpoint(address safe_) internal returns (string memory) {
+    function _getEstimateGasEndpoint(address safe_) internal pure returns (string memory) {
         return string.concat(_getSafeAPIEndpoint(safe_), SAFE_API_MULTISIG_ESTIMATE);
     }
 
-    function _getHeaders() internal returns (string[] memory) {
+    function _getHeaders() internal pure returns (string[] memory) {
         string[] memory headers = new string[](1);
         headers[0] = "Content-Type: application/json";
         return headers;
