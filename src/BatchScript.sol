@@ -5,17 +5,8 @@ pragma solidity >=0.6.2 <0.9.0;
 // Gnosis Safe transaction batching script
 
 // 🧩 MODULES
-import {
-    Script,
-    console,
-    console2,
-    StdChains,
-    stdJson,
-    stdMath,
-    StdStorage,
-    stdStorageSafe,
-    VmSafe
-} from "forge-std/Script.sol";
+//import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "forge-std/Script.sol";
+import "forge-std/Script.sol";
 
 import {Surl} from "lib/surl/src/Surl.sol";
 
@@ -45,13 +36,17 @@ abstract contract BatchScript is Script {
     //     "origin": "string"  // Give more information about the transaction, e.g. "My Custom Safe app"
 
     // Deterministic deployment address of the Gnosis Safe Multisend contract.
-    address internal constant SAFE_MULTISEND_ADDRESS_PRI = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761; // TODO mainnet, goerli, most others
-    address internal constant SAFE_MULTISEND_ADDRESS_SEC = 0x998739BFdAAdde7C933B942a68053933098f9EDa; // TODO optimism, some others
+    address internal constant SAFE_MULTISEND_ADDRESS_PRI =
+        0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761; // TODO mainnet, goerli, most others
+    address internal constant SAFE_MULTISEND_ADDRESS_SEC =
+        0x998739BFdAAdde7C933B942a68053933098f9EDa; // TODO optimism, some others
 
-    string internal constant SAFE_API_BASE_URL = "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
+    string internal constant SAFE_API_BASE_URL =
+        "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
     string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions";
     string internal constant SAFE_API_MULTISIG_ESTIMATE = "/estimations/";
-    string internal constant ETHERSCAN_GAS_API_URL = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
+    string internal constant ETHERSCAN_GAS_API_URL =
+        "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
 
     enum Operation {
         CALL,
@@ -83,8 +78,14 @@ abstract contract BatchScript is Script {
     // - `value` as a `uint256` (=> 32 bytes),
     // -  length of `data` as a `uint256` (=> 32 bytes),
     // - `data` as `bytes`.
-    function addToBatch(address to_, uint256 value_, bytes memory data_) public {
-        encodedTxns.push(abi.encodePacked(Operation.CALL, to_, value_, data_.length, data_));
+    function addToBatch(
+        address to_,
+        uint256 value_,
+        bytes memory data_
+    ) public {
+        encodedTxns.push(
+            abi.encodePacked(Operation.CALL, to_, value_, data_.length, data_)
+        );
     }
 
     function executeBatch(address safe_) public {
@@ -102,7 +103,10 @@ abstract contract BatchScript is Script {
         batch.operation = Operation.DELEGATECALL;
 
         // Encode the batch calldata
-        batch.data = abi.encodeWithSignature("multiSend(bytes)", abi.encode(encodedTxns));
+        batch.data = abi.encodeWithSignature(
+            "multiSend(bytes)",
+            abi.encode(encodedTxns)
+        );
 
         // Get the gas estimate for the batch
         batch.safeTxGas = _estimateBatchGas(safe_, batch);
@@ -114,7 +118,7 @@ abstract contract BatchScript is Script {
         batch.nonce = _getNonce(safe_);
 
         // Get the transaction hash
-        batch.txHash = _getTransactionHash(safe_, batch);        
+        batch.txHash = _getTransactionHash(safe_, batch);
     }
 
     function _sendBatch(address safe_, Batch memory batch_) internal {
@@ -135,17 +139,26 @@ abstract contract BatchScript is Script {
         payload = payload.serialize("sender", msg.sender);
 
         // Send batch
-        (uint256 status, bytes memory data) = endpoint.post(_getHeaders(), payload);
+        (uint256 status, bytes memory data) = endpoint.post(
+            _getHeaders(),
+            payload
+        );
 
-        if (status == 201) console2.log("Batch sent successfully");
-        else revert("Send batch failed!");
+        if (status == 201) {
+            console2.log("Batch sent successfully");
+            //console2.log(data);
+        } else {
+            revert("Send batch failed!");
+        }
     }
-
 
     // Computes the EIP712 hash of a Safe transaction.
     // Look at https://github.com/safe-global/safe-eth-py/blob/174053920e0717cc9924405e524012c5f953cd8f/gnosis/safe/safe_tx.py#L186
     // and https://github.com/safe-global/safe-eth-py/blob/master/gnosis/eth/eip712/__init__.py
-    function _getTransactionHash(address safe_, Batch memory batch_) internal view returns (bytes32) {
+    function _getTransactionHash(
+        address safe_,
+        Batch memory batch_
+    ) internal view returns (bytes32) {
         // // Create EIP712 structured data for the batch transaction
 
         // // EIP712Domain Types
@@ -223,36 +236,45 @@ abstract contract BatchScript is Script {
         // ABI-encoding version
 
         // Create hash of the transaction with EIP712
-    
-        return keccak256(abi.encodePacked(
-                hex"1901",
-                keccak256(
-                    abi.encode(
-                        keccak256("EIP712Domain(address verifyingContract, uint256 chainId)"),
-                        safe_,
-                        vm.envUint("CHAIN_ID")
-                    )
-                ),
-                keccak256(
-                    abi.encode(
-                        keccak256("SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"),
-                        batch_.to,
-                        batch_.value,
-                        batch_.data,
-                        uint256(batch_.operation),
-                        batch_.safeTxGas,
-                        batch_.baseGas,
-                        batch_.gasPrice,
-                        address(0),
-                        address(0),
-                        batch_.nonce
+
+        return
+            keccak256(
+                abi.encodePacked(
+                    hex"1901",
+                    keccak256(
+                        abi.encode(
+                            keccak256(
+                                "EIP712Domain(address verifyingContract, uint256 chainId)"
+                            ),
+                            safe_,
+                            vm.envUint("CHAIN_ID")
+                        )
+                    ),
+                    keccak256(
+                        abi.encode(
+                            keccak256(
+                                "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+                            ),
+                            batch_.to,
+                            batch_.value,
+                            batch_.data,
+                            uint256(batch_.operation),
+                            batch_.safeTxGas,
+                            batch_.baseGas,
+                            batch_.gasPrice,
+                            address(0),
+                            address(0),
+                            batch_.nonce
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
-    function _estimateBatchGas(address safe_, Batch memory batch_) internal returns (uint256) {
+    function _estimateBatchGas(
+        address safe_,
+        Batch memory batch_
+    ) internal returns (uint256) {
         // Get endpoint
         string memory endpoint = _getEstimateGasEndpoint(safe_);
 
@@ -264,7 +286,10 @@ abstract contract BatchScript is Script {
         payload = payload.serialize("operation", uint256(batch_.operation));
 
         // Get gas estimate for batch
-        (uint256 status, bytes memory data) = endpoint.post(_getHeaders(), payload);
+        (uint256 status, bytes memory data) = endpoint.post(
+            _getHeaders(),
+            payload
+        );
 
         if (status == 200) {
             string memory result = abi.decode(data, (string));
@@ -274,21 +299,33 @@ abstract contract BatchScript is Script {
         }
     }
 
-    function _getGasPrice() internal returns (uint256 baseFee, uint256 gasPrice) {
-        string memory endpoint = string.concat(ETHERSCAN_GAS_API_URL, vm.envString("ETHERSCAN_API_KEY"));
+    function _getGasPrice()
+        internal
+        returns (uint256 baseFee, uint256 gasPrice)
+    {
+        string memory endpoint = string.concat(
+            ETHERSCAN_GAS_API_URL,
+            vm.envString("ETHERSCAN_API_KEY")
+        );
         (uint256 status, bytes memory data) = endpoint.get();
         if (status == 200) {
             string memory result = abi.decode(data, (string));
-            return (result.readUint("suggestBaseFee"), result.readUint("FastGasPrice"));
+            return (
+                result.readUint("suggestBaseFee"),
+                result.readUint("FastGasPrice")
+            );
         } else {
             revert("Gas price call failed!");
         }
     }
 
     function _getNonce(address safe_) internal returns (uint256) {
-        string memory endpoint = string.concat(SAFE_API_BASE_URL, vm.toString(safe_));
+        string memory endpoint = string.concat(
+            SAFE_API_BASE_URL,
+            vm.toString(safe_)
+        );
         (uint256 status, bytes memory data) = endpoint.get();
-        if(status == 200) {
+        if (status == 200) {
             string memory result = abi.decode(data, (string));
             return result.readUint("nonce");
         } else {
@@ -296,12 +333,25 @@ abstract contract BatchScript is Script {
         }
     }
 
-    function _getSafeAPIEndpoint(address safe_) internal pure returns(string memory) {
-        return string.concat(SAFE_API_BASE_URL, vm.toString(safe_), SAFE_API_MULTISIG_SEND);
+    function _getSafeAPIEndpoint(
+        address safe_
+    ) internal pure returns (string memory) {
+        return
+            string.concat(
+                SAFE_API_BASE_URL,
+                vm.toString(safe_),
+                SAFE_API_MULTISIG_SEND
+            );
     }
 
-    function _getEstimateGasEndpoint(address safe_) internal pure returns (string memory) {
-        return string.concat(_getSafeAPIEndpoint(safe_), SAFE_API_MULTISIG_ESTIMATE);
+    function _getEstimateGasEndpoint(
+        address safe_
+    ) internal pure returns (string memory) {
+        return
+            string.concat(
+                _getSafeAPIEndpoint(safe_),
+                SAFE_API_MULTISIG_ESTIMATE
+            );
     }
 
     function _getHeaders() internal pure returns (string[] memory) {
@@ -309,7 +359,4 @@ abstract contract BatchScript is Script {
         headers[0] = "Content-Type: application/json";
         return headers;
     }
-
 }
-
-
