@@ -46,7 +46,7 @@ abstract contract BatchScript is Script {
     string internal constant SAFE_API_BASE_URL =
         "https://safe-transaction-goerli.safe.global/api/v1/safes/";
     string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
-    string internal constant SAFE_API_MULTISIG_ESTIMATE = "/estimations/";
+    string internal constant SAFE_API_MULTISIG_ESTIMATE = "estimations/";
     // string internal constant ETHERSCAN_GAS_API_URL =
     //     "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
     string internal constant ETHERSCAN_GAS_API_URL =
@@ -113,7 +113,7 @@ abstract contract BatchScript is Script {
         );
 
         // Get the gas estimate for the batch
-        batch.safeTxGas = 0; //_estimateBatchGas(safe_, batch);
+        batch.safeTxGas = 0; // _estimateBatchGas(safe_, batch);
 
         // Get the gas price
         // (batch.baseGas, batch.gasPrice) = _getGasPrice();
@@ -134,18 +134,20 @@ abstract contract BatchScript is Script {
         string memory endpoint = _getSafeAPIEndpoint(safe_);
 
         // Create json payload for API call to Gnosis transaction service
-        string memory payload = "";
-        payload.serialize("safe", safe_);
-        payload.serialize("to", batch_.to);
-        payload.serialize("value", batch_.value);
-        payload.serialize("data", batch_.data);
-        payload.serialize("operation", uint256(batch_.operation));
-        payload.serialize("safeTxGas", batch_.safeTxGas);
-        payload.serialize("baseGas", batch_.baseGas);
-        payload.serialize("gasPrice", batch_.gasPrice);
-        payload.serialize("nonce", batch_.nonce);
-        payload.serialize("contractTransactionHash", batch_.txHash);
-        payload.serialize("sender", msg.sender);
+        string memory placeholder = "";
+        placeholder.serialize("safe", safe_);
+        placeholder.serialize("to", batch_.to);
+        placeholder.serialize("value", batch_.value);
+        placeholder.serialize("data", batch_.data);
+        placeholder.serialize("operation", uint256(batch_.operation));
+        placeholder.serialize("safeTxGas", batch_.safeTxGas);
+        placeholder.serialize("baseGas", batch_.baseGas);
+        placeholder.serialize("gasPrice", batch_.gasPrice);
+        placeholder.serialize("nonce", batch_.nonce);
+        placeholder.serialize("gasToken", address(0));
+        placeholder.serialize("refundReceiver", address(0));
+        placeholder.serialize("contractTransactionHash", batch_.txHash);
+        string memory payload = placeholder.serialize("sender", msg.sender);
 
         // Send batch
         (uint256 status, bytes memory data) = endpoint.post(
@@ -288,11 +290,11 @@ abstract contract BatchScript is Script {
         string memory endpoint = _getEstimateGasEndpoint(safe_);
 
         // Create json payload for send API call to Gnosis transaction service
-        string memory payload = "";
-        payload = payload.serialize("to", batch_.to);
-        payload = payload.serialize("value", batch_.value);
-        payload = payload.serialize("data", batch_.data);
-        payload = payload.serialize("operation", uint256(batch_.operation));
+        string memory placeholder = "";
+        placeholder.serialize("to", batch_.to);
+        placeholder.serialize("value", batch_.value);
+        placeholder.serialize("data", batch_.data);
+        string memory payload = placeholder.serialize("operation", uint256(batch_.operation));
 
         // Get gas estimate for batch
         (uint256 status, bytes memory data) = endpoint.post(
