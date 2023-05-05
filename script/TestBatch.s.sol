@@ -25,7 +25,7 @@ contract TestBatch is BatchScript {
 
     /// @notice The main script entrypoint
     function run() external {
-        vm.startBroadcast();
+        // vm.startBroadcast();
 
         IKernel kernel = IKernel(0xDb7cf68154bd422dF5196D90285ceA057786b4c3);
         ICrossChainBridge bridge = ICrossChainBridge(localBridgeAddr);
@@ -52,6 +52,6 @@ contract TestBatch is BatchScript {
         // Execute batch
         executeBatch(safe);
 
-        vm.stopBroadcast();
+        // vm.stopBroadcast();
     }
 }

@@ -8,7 +8,7 @@ pragma solidity >=0.6.2 <0.9.0;
 //import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "forge-std/Script.sol";
 import "forge-std/Script.sol";
 
-import {Surl} from "lib/surl/src/Surl.sol";
+import {Surl} from "surl/Surl.sol";
 
 // ⭐️ SCRIPT
 abstract contract BatchScript is Script {
@@ -41,12 +41,16 @@ abstract contract BatchScript is Script {
     address internal constant SAFE_MULTISEND_ADDRESS_SEC =
         0x998739BFdAAdde7C933B942a68053933098f9EDa; // TODO optimism, some others
 
+    // string internal constant SAFE_API_BASE_URL =
+    //     "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
     string internal constant SAFE_API_BASE_URL =
-        "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
+        "https://safe-transaction-goerli.safe.global/api/v1/safes/";
     string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions";
     string internal constant SAFE_API_MULTISIG_ESTIMATE = "/estimations/";
+    // string internal constant ETHERSCAN_GAS_API_URL =
+    //     "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
     string internal constant ETHERSCAN_GAS_API_URL =
-        "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
+        "https://api-goerli.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
 
     enum Operation {
         CALL,
@@ -119,6 +123,9 @@ abstract contract BatchScript is Script {
 
         // Get the transaction hash
         batch.txHash = _getTransactionHash(safe_, batch);
+
+        // Sign the transaction hash
+        // batch.signature = vm.sign(vm.env("GOV_PRIVATE_KEY"), batch.txHash);
     }
 
     function _sendBatch(address safe_, Batch memory batch_) internal {
