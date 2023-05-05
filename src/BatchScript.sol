@@ -45,7 +45,7 @@ abstract contract BatchScript is Script {
     //     "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
     string internal constant SAFE_API_BASE_URL =
         "https://safe-transaction-goerli.safe.global/api/v1/safes/";
-    string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions";
+    string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
     string internal constant SAFE_API_MULTISIG_ESTIMATE = "/estimations/";
     // string internal constant ETHERSCAN_GAS_API_URL =
     //     "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
@@ -113,10 +113,12 @@ abstract contract BatchScript is Script {
         );
 
         // Get the gas estimate for the batch
-        batch.safeTxGas = _estimateBatchGas(safe_, batch);
+        batch.safeTxGas = 0; //_estimateBatchGas(safe_, batch);
 
         // Get the gas price
-        (batch.baseGas, batch.gasPrice) = _getGasPrice();
+        // (batch.baseGas, batch.gasPrice) = _getGasPrice();
+        batch.baseGas = 0;
+        batch.gasPrice = 0;
 
         // Get the safe nonce
         batch.nonce = _getNonce(safe_);
@@ -133,17 +135,17 @@ abstract contract BatchScript is Script {
 
         // Create json payload for API call to Gnosis transaction service
         string memory payload = "";
-        payload = payload.serialize("safe", safe_);
-        payload = payload.serialize("to", batch_.to);
-        payload = payload.serialize("value", batch_.value);
-        payload = payload.serialize("data", batch_.data);
-        payload = payload.serialize("operation", uint256(batch_.operation));
-        payload = payload.serialize("safeTxGas", batch_.safeTxGas);
-        payload = payload.serialize("baseGas", batch_.baseGas);
-        payload = payload.serialize("gasPrice", batch_.gasPrice);
-        payload = payload.serialize("nonce", batch_.nonce);
-        payload = payload.serialize("contractTransactionHash", batch_.txHash);
-        payload = payload.serialize("sender", msg.sender);
+        payload.serialize("safe", safe_);
+        payload.serialize("to", batch_.to);
+        payload.serialize("value", batch_.value);
+        payload.serialize("data", batch_.data);
+        payload.serialize("operation", uint256(batch_.operation));
+        payload.serialize("safeTxGas", batch_.safeTxGas);
+        payload.serialize("baseGas", batch_.baseGas);
+        payload.serialize("gasPrice", batch_.gasPrice);
+        payload.serialize("nonce", batch_.nonce);
+        payload.serialize("contractTransactionHash", batch_.txHash);
+        payload.serialize("sender", msg.sender);
 
         // Send batch
         (uint256 status, bytes memory data) = endpoint.post(
@@ -329,12 +331,13 @@ abstract contract BatchScript is Script {
     function _getNonce(address safe_) internal returns (uint256) {
         string memory endpoint = string.concat(
             SAFE_API_BASE_URL,
-            vm.toString(safe_)
+            vm.toString(safe_),
+            "/"
         );
         (uint256 status, bytes memory data) = endpoint.get();
         if (status == 200) {
-            string memory result = abi.decode(data, (string));
-            return result.readUint("nonce");
+            string memory result = string(data);
+            return result.readUint(".nonce");
         } else {
             revert("Get nonce failed!");
         }

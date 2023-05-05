@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {BatchScript} from "src/BatchScript.sol";
 
-interface RolesAdmin {
+interface IRolesAdmin {
     function grantRole(bytes32 role_, address wallet_) external;
 }
 

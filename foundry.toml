@@ -12,3 +12,4 @@ remappings = [
     'solmate/=lib/solmate/src',
     'surl/=lib/surl/src',
 ]
+ffi = true
