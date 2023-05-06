@@ -35,6 +35,20 @@ abstract contract BatchScript is Script {
     // Not required
     //     "origin": "string"  // Give more information about the transaction, e.g. "My Custom Safe app"
 
+    // Hash constants
+    // Safe version for this script, hashes below depend on this
+    string public constant VERSION = "1.3.0";
+
+    // keccak256(
+    //     "EIP712Domain(uint256 chainId,address verifyingContract)"
+    // );
+    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
+
+    // keccak256(
+    //     "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+    // );
+    bytes32 private constant SAFE_TX_TYPEHASH = 0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
+
     // Deterministic deployment address of the Gnosis Safe Multisend contract.
     address internal constant SAFE_MULTISEND_ADDRESS_PRI =
         0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761; // TODO mainnet, goerli, most others
@@ -125,9 +139,6 @@ abstract contract BatchScript is Script {
 
         // Get the transaction hash
         batch.txHash = _getTransactionHash(safe_, batch);
-
-        // Sign the transaction hash
-        // batch.signature = vm.sign(vm.env("GOV_PRIVATE_KEY"), batch.txHash);
     }
 
     function _sendBatch(address safe_, Batch memory batch_) internal {
@@ -157,8 +168,8 @@ abstract contract BatchScript is Script {
 
         if (status == 201) {
             console2.log("Batch sent successfully");
-            //console2.log(data);
         } else {
+            console2.log(string(data));
             revert("Send batch failed!");
         }
     }
@@ -170,16 +181,47 @@ abstract contract BatchScript is Script {
         address safe_,
         Batch memory batch_
     ) internal view returns (bytes32) {
-        // // Create EIP712 structured data for the batch transaction
+        return
+            keccak256(
+                abi.encodePacked(
+                    hex"1901",
+                    keccak256(
+                        abi.encode(
+                            DOMAIN_SEPARATOR_TYPEHASH,
+                            vm.envUint("CHAIN_ID"),
+                            safe_
+                        )
+                    ),
+                    keccak256(
+                        abi.encode(
+                            SAFE_TX_TYPEHASH,
+                            batch_.to,
+                            batch_.value,
+                            keccak256(batch_.data),
+                            batch_.operation,
+                            batch_.safeTxGas,
+                            batch_.baseGas,
+                            batch_.gasPrice,
+                            address(0),
+                            address(0),
+                            batch_.nonce
+                        )
+                    )
+                )
+            );
+    }
 
-        // // EIP712Domain Types
-        // string[] memory domainTypes = new string[](2);
-        // domainTypes[0] = "";
-        // domainTypes[0] = domainTypes[0].serialize("name", "verifyingContract");
-        // domainTypes[0] = domainTypes[0].serialize("type", "address");
-        // domainTypes[1] = "";
-        // domainTypes[1] = domainTypes[1].serialize("name", "chainId");
-        // domainTypes[1] = domainTypes[1].serialize("type", "uint256");
+    function _getTypedData(address safe_, Batch memory batch_) internal pure returns (string memory) {
+        // Create EIP712 structured data for the batch transaction to sign externally via cast
+
+        // // EIP712 Types
+        // string[] memory types = new string[](2);
+        // types[0] = "";
+        // types[0].serialize("name", "verifyingContract");
+        // types[0].serialize("type", "address");
+        // types[1] = "";
+        // types[1].serialize("name", "chainId");
+        // types[1].serialize("type", "uint256");
 
         // // SafeTx Field Types
         // string[] memory txnTypes = new string[](10);
@@ -244,42 +286,7 @@ abstract contract BatchScript is Script {
         // payload = payload.serialize("domain", domain);
         // payload = payload.serialize("message", message);
 
-        // ABI-encoding version
-
-        // Create hash of the transaction with EIP712
-
-        return
-            keccak256(
-                abi.encodePacked(
-                    hex"1901",
-                    keccak256(
-                        abi.encode(
-                            keccak256(
-                                "EIP712Domain(address verifyingContract, uint256 chainId)"
-                            ),
-                            safe_,
-                            vm.envUint("CHAIN_ID")
-                        )
-                    ),
-                    keccak256(
-                        abi.encode(
-                            keccak256(
-                                "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
-                            ),
-                            batch_.to,
-                            batch_.value,
-                            batch_.data,
-                            uint256(batch_.operation),
-                            batch_.safeTxGas,
-                            batch_.baseGas,
-                            batch_.gasPrice,
-                            address(0),
-                            address(0),
-                            batch_.nonce
-                        )
-                    )
-                )
-            );
+        return "";
     }
 
     function _estimateBatchGas(
