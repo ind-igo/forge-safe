@@ -83,6 +83,7 @@ abstract contract BatchScript is Script {
         address refundReceiver;
         uint256 nonce;
         bytes32 txHash;
+        bytes signature;
     }
 
     bytes[] public encodedTxns;
@@ -108,6 +109,7 @@ abstract contract BatchScript is Script {
 
     function executeBatch(address safe_) public {
         Batch memory batch = _createBatch(safe_);
+        batch = _signBatch(safe_, batch);
         _sendBatch(safe_, batch);
     }
 
@@ -141,6 +143,33 @@ abstract contract BatchScript is Script {
         batch.txHash = _getTransactionHash(safe_, batch);
     }
 
+    function _signBatch(address safe_, Batch memory batch_)
+        internal
+        returns (Batch memory)
+    {
+        // Get the typed data to sign
+        string memory typedData = _getTypedData(safe_, batch_);
+
+        // Sign the typed data from the CLI and get the signature
+
+        string memory commandStart = "~/projects/foundry/target/debug/cast wallet sign ";
+        string memory wallet = string.concat("--private-key ", vm.toString(vm.envBytes("GOV_PRIVATE_KEY")), " ");
+        // string memory wallet = string.concat("--ledger --mnemonic-index ", vm.toString(vm.envUint("MNEMONIC_INDEX")), " ");
+        string memory commandEnd = "typed-data ";
+
+        string[] memory inputs = new string[](3);
+        inputs[0] = "sh";
+        inputs[1] = "-c";
+        inputs[2] = string.concat(commandStart, wallet, commandEnd, "'", typedData, "'");
+        bytes memory signature = vm.ffi(inputs);
+
+        // Set the signature on the batch
+        batch_.signature = signature;
+
+        return batch_;
+    }
+
+
     function _sendBatch(address safe_, Batch memory batch_) internal {
         string memory endpoint = _getSafeAPIEndpoint(safe_);
 
@@ -158,6 +187,7 @@ abstract contract BatchScript is Script {
         placeholder.serialize("gasToken", address(0));
         placeholder.serialize("refundReceiver", address(0));
         placeholder.serialize("contractTransactionHash", batch_.txHash);
+        placeholder.serialize("signature", batch_.signature);
         string memory payload = placeholder.serialize("sender", msg.sender);
 
         // Send batch
@@ -211,82 +241,97 @@ abstract contract BatchScript is Script {
             );
     }
 
-    function _getTypedData(address safe_, Batch memory batch_) internal pure returns (string memory) {
+    function _getTypedData(address safe_, Batch memory batch_) internal returns (string memory) {
         // Create EIP712 structured data for the batch transaction to sign externally via cast
 
-        // // EIP712 Types
-        // string[] memory types = new string[](2);
-        // types[0] = "";
-        // types[0].serialize("name", "verifyingContract");
-        // types[0].serialize("type", "address");
-        // types[1] = "";
-        // types[1].serialize("name", "chainId");
-        // types[1].serialize("type", "uint256");
+        // EIP712Domain Field Types
+        string[] memory domainTypes = new string[](2);
+        string memory t = "domainType0";
+        vm.serializeString(t, 'name', 'verifyingContract');
+        domainTypes[0] = vm.serializeString(t, "type", "address");
+        t = "domainType1";
+        vm.serializeString(t, "name", "chainId");
+        domainTypes[1] = vm.serializeString(t, "type", "uint256");
 
-        // // SafeTx Field Types
-        // string[] memory txnTypes = new string[](10);
-        // txnTypes[0] = "";
-        // txnTypes[0] = txnTypes[0].serialize("name", "to");
-        // txnTypes[0] = txnTypes[0].serialize("type", "address");
-        // txnTypes[1] = "";
-        // txnTypes[1] = txnTypes[1].serialize("name", "value");
-        // txnTypes[1] = txnTypes[1].serialize("type", "uint256");
-        // txnTypes[2] = "";
-        // txnTypes[2] = txnTypes[2].serialize("name", "data");
-        // txnTypes[2] = txnTypes[2].serialize("type", "bytes");
-        // txnTypes[3] = "";
-        // txnTypes[3] = txnTypes[3].serialize("name", "operation");
-        // txnTypes[3] = txnTypes[3].serialize("type", "uint8");
-        // txnTypes[4] = "";
-        // txnTypes[4] = txnTypes[4].serialize("name", "safeTxGas");
-        // txnTypes[4] = txnTypes[4].serialize("type", "uint256");
-        // txnTypes[5] = "";
-        // txnTypes[5] = txnTypes[5].serialize("name", "baseGas");
-        // txnTypes[5] = txnTypes[5].serialize("type", "uint256");
-        // txnTypes[6] = "";
-        // txnTypes[6] = txnTypes[6].serialize("name", "gasPrice");
-        // txnTypes[6] = txnTypes[6].serialize("type", "uint256");
-        // txnTypes[7] = "";
-        // txnTypes[7] = txnTypes[7].serialize("name", "gasToken");
-        // txnTypes[7] = txnTypes[7].serialize("type", "address");
-        // txnTypes[8] = "";
-        // txnTypes[8] = txnTypes[8].serialize("name", "refundReceiver");
-        // txnTypes[8] = txnTypes[8].serialize("type", "address");
-        // txnTypes[9] = "";
-        // txnTypes[9] = txnTypes[9].serialize("name", "nonce");
-        // txnTypes[9] = txnTypes[9].serialize("type", "uint256");
+        // SafeTx Field Types
+        string[] memory txnTypes = new string[](10);
+        t = "txnType0";
+        vm.serializeString(t, "name", "to");
+        txnTypes[0] = vm.serializeString(t, "type", "address");
+        t = "txnType1";
+        vm.serializeString(t, "name", "value");
+        txnTypes[1] = vm.serializeString(t, "type", "uint256");
+        t = "txnType2";
+        vm.serializeString(t, "name", "data");
+        txnTypes[2] = vm.serializeString(t, "type", "bytes");
+        t = "txnType3";
+        vm.serializeString(t, "name", "operation");
+        txnTypes[3] = vm.serializeString(t, "type", "uint8");
+        t = "txnType4";
+        vm.serializeString(t, "name", "safeTxGas");
+        txnTypes[4] = vm.serializeString(t, "type", "uint256");
+        t = "txnType5";
+        vm.serializeString(t, "name", "baseGas");
+        txnTypes[5] = vm.serializeString(t, "type", "uint256");
+        t = "txnType6";
+        vm.serializeString(t, "name", "gasPrice");
+        txnTypes[6] = vm.serializeString(t, "type", "uint256");
+        t = "txnType7";
+        vm.serializeString(t, "name", "gasToken");
+        txnTypes[7] = vm.serializeString(t, "type", "address");
+        t = "txnType8";
+        vm.serializeString(t, "name", "refundReceiver");
+        txnTypes[8] = vm.serializeString(t, "type", "address");
+        t = "txnType9";
+        vm.serializeString(t, "name", "nonce");
+        txnTypes[9] = vm.serializeString(t, "type", "uint256");
 
-        // // Create the top level types object
-        // string memory types = "";
-        // types = types.serialize("EIP712Domain", domainTypes);
-        // types = types.serialize("SafeTx", txnTypes);
+        // Create the top level types object
+        t = "topLevelTypes";
+        t.serialize("EIP712Domain", domainTypes);
+        string memory types = t.serialize("SafeTx", txnTypes);
 
-        // // Create the message object
-        // string memory message = "";
-        // message = message.serialize("to", Batch.to);
-        // message = message.serialize("value", Batch.value);
-        // message = message.serialize("data", Batch.data);
-        // message = message.serialize("operation", uint256(Batch.operation));
-        // message = message.serialize("safeTxGas", Batch.safeTxGas);
-        // message = message.serialize("baseGas", Batch.baseGas);
-        // message = message.serialize("gasPrice", Batch.gasPrice);
-        // message = message.serialize("gasToken", address(0));
-        // message = message.serialize("refundReceiver", address(0));
-        // message = message.serialize("nonce", Batch.nonce);
+        // Create the message object
+        string memory m = "message";
+        m.serialize("to", batch_.to);
+        m.serialize("value", batch_.value);
+        m.serialize("data", batch_.data);
+        m.serialize("operation", uint256(batch_.operation));
+        m.serialize("safeTxGas", batch_.safeTxGas);
+        m.serialize("baseGas", batch_.baseGas);
+        m.serialize("gasPrice", batch_.gasPrice);
+        m.serialize("gasToken", address(0));
+        m.serialize("refundReceiver", address(0));
+        string memory message = m.serialize("nonce", batch_.nonce);
 
-        // // Create the domain object
-        // string memory domain = "";
-        // domain = domain.serialize("verifyingContract", Batch.safe);
-        // domain = domain.serialize("chainId", vm.envUint("CHAIN_ID"));
+        // Create the domain object
+        string memory d = "domain";
+        d.serialize("verifyingContract", safe_);
+        string memory domain = d.serialize("chainId", vm.envUint("CHAIN_ID"));
 
-        // // Create the payload object
-        // string memory payload = "";
-        // payload = payload.serialize("types", types);
-        // payload = payload.serialize("primaryType", "SafeTx");
-        // payload = payload.serialize("domain", domain);
-        // payload = payload.serialize("message", message);
+        // Create the payload object
+        string memory p = "payload";
+        p.serialize("types", types);
+        vm.serializeString(p, "primaryType", "SafeTx");
+        p.serialize("domain", domain);
+        string memory payload = p.serialize("message", message);
 
-        return "";
+        payload = _stripArrayQuotes(payload);
+
+        return payload;
+    }
+
+    function _stripArrayQuotes(string memory str_) internal returns (string memory) {
+        // Remove slash quotes from string
+        string memory command = string.concat("sed 's/",'\\\\"/"',"/g; s/", '\\"', "\\[/\\[/g; s/", '\\]\\"', "/\\]/g; s/", '\\"', "{/{/g; s/", '}\\"', "/}/g;' <<< ");
+
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = string.concat(command, "'", str_, "'");
+        bytes memory res = vm.ffi(inputs);
+        
+        return string(res);
     }
 
     function _estimateBatchGas(
