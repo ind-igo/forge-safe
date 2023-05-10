@@ -122,10 +122,15 @@ abstract contract BatchScript is Script {
         batch.value = 0;
         batch.operation = Operation.DELEGATECALL;
 
-        // Encode the batch calldata
+        // Encode the batch calldata. The list of transactions is tightly packed.
+        bytes memory data;
+        uint256 len = encodedTxns.length;
+        for (uint256 i; i < len; ++i) {
+            data = bytes.concat(data, encodedTxns[i]);
+        }
         batch.data = abi.encodeWithSignature(
             "multiSend(bytes)",
-            abi.encode(encodedTxns)
+            data
         );
 
         // Get the gas estimate for the batch
@@ -158,7 +163,7 @@ abstract contract BatchScript is Script {
         string memory commandEnd = "typed-data ";
 
         string[] memory inputs = new string[](3);
-        inputs[0] = "sh";
+        inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = string.concat(commandStart, wallet, commandEnd, "'", typedData, "'");
         bytes memory signature = vm.ffi(inputs);
