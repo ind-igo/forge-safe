@@ -61,11 +61,6 @@ abstract contract BatchScript is Script, DelegatePrank {
     string internal constant SAFE_API_BASE_URL =
         "https://safe-transaction-goerli.safe.global/api/v1/safes/";
     string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
-    string internal constant SAFE_API_MULTISIG_ESTIMATE = "estimations/";
-    // string internal constant ETHERSCAN_GAS_API_URL =
-    //     "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
-    string internal constant ETHERSCAN_GAS_API_URL =
-        "https://api-goerli.etherscan.io/api?module=gastracker&action=gasoracle&apikey=";
 
     enum Operation {
         CALL,
@@ -112,7 +107,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         Batch memory batch = _createBatch(safe_);
         batch = _signBatch(safe_, batch);
         _simulateBatch(safe_, batch);
-        _sendBatch(safe_, batch);
+        // _sendBatch(safe_, batch);
     }
 
     // Internal functions
@@ -135,13 +130,7 @@ abstract contract BatchScript is Script, DelegatePrank {
             data
         );
 
-        // Get the gas estimate for the batch
-        batch.safeTxGas = 0; // _estimateBatchGas(safe_, batch);
-
-        // Get the gas price
-        // (batch.baseGas, batch.gasPrice) = _getGasPrice();
-        batch.baseGas = 0;
-        batch.gasPrice = 0;
+        // Batch gas parameters can all be zero and don't need to be set
 
         // Get the safe nonce
         batch.nonce = _getNonce(safe_);
@@ -352,54 +341,6 @@ abstract contract BatchScript is Script, DelegatePrank {
         return string(res);
     }
 
-    function _estimateBatchGas(
-        address safe_,
-        Batch memory batch_
-    ) internal returns (uint256) {
-        // Get endpoint
-        string memory endpoint = _getEstimateGasEndpoint(safe_);
-
-        // Create json payload for send API call to Gnosis transaction service
-        string memory placeholder = "";
-        placeholder.serialize("to", batch_.to);
-        placeholder.serialize("value", batch_.value);
-        placeholder.serialize("data", batch_.data);
-        string memory payload = placeholder.serialize("operation", uint256(batch_.operation));
-
-        // Get gas estimate for batch
-        (uint256 status, bytes memory data) = endpoint.post(
-            _getHeaders(),
-            payload
-        );
-
-        if (status == 200) {
-            string memory result = abi.decode(data, (string));
-            return result.readUint("safeTxGas");
-        } else {
-            revert("Gas estimation call failed!");
-        }
-    }
-
-    function _getGasPrice()
-        internal
-        returns (uint256 baseFee, uint256 gasPrice)
-    {
-        string memory endpoint = string.concat(
-            ETHERSCAN_GAS_API_URL,
-            vm.envString("ETHERSCAN_API_KEY")
-        );
-        (uint256 status, bytes memory data) = endpoint.get();
-        if (status == 200) {
-            string memory result = abi.decode(data, (string));
-            return (
-                result.readUint("suggestBaseFee"),
-                result.readUint("FastGasPrice")
-            );
-        } else {
-            revert("Gas price call failed!");
-        }
-    }
-
     function _getNonce(address safe_) internal returns (uint256) {
         string memory endpoint = string.concat(
             SAFE_API_BASE_URL,
@@ -423,16 +364,6 @@ abstract contract BatchScript is Script, DelegatePrank {
                 SAFE_API_BASE_URL,
                 vm.toString(safe_),
                 SAFE_API_MULTISIG_SEND
-            );
-    }
-
-    function _getEstimateGasEndpoint(
-        address safe_
-    ) internal pure returns (string memory) {
-        return
-            string.concat(
-                _getSafeAPIEndpoint(safe_),
-                SAFE_API_MULTISIG_ESTIMATE
             );
     }
 
