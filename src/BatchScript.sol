@@ -110,7 +110,8 @@ abstract contract BatchScript is Script {
     function executeBatch(address safe_) public {
         Batch memory batch = _createBatch(safe_);
         batch = _signBatch(safe_, batch);
-        _sendBatch(safe_, batch);
+        _simulateBatch(safe_, batch);
+        // _sendBatch(safe_, batch);
     }
 
     // Internal functions
@@ -172,6 +173,14 @@ abstract contract BatchScript is Script {
         batch_.signature = signature;
 
         return batch_;
+    }
+
+    function _simulateBatch(address safe_, Batch memory batch_) internal {
+        vm.prank(safe_);
+        require(batch_.to.code.length > 0, "No code at address");
+        (bool success, bytes memory data) = batch_.to.delegatecall(batch_.data);
+
+        if (!success) revert(string(data));
     }
 
 
