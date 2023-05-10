@@ -9,9 +9,10 @@ pragma solidity >=0.6.2 <0.9.0;
 import "forge-std/Script.sol";
 
 import {Surl} from "surl/Surl.sol";
+import {DelegatePrank} from "src/lib/DelegatePrank.sol";
 
 // ⭐️ SCRIPT
-abstract contract BatchScript is Script {
+abstract contract BatchScript is Script, DelegatePrank {
     using stdJson for string;
     using Surl for *;
 
@@ -111,7 +112,7 @@ abstract contract BatchScript is Script {
         Batch memory batch = _createBatch(safe_);
         batch = _signBatch(safe_, batch);
         _simulateBatch(safe_, batch);
-        // _sendBatch(safe_, batch);
+        _sendBatch(safe_, batch);
     }
 
     // Internal functions
@@ -176,11 +177,14 @@ abstract contract BatchScript is Script {
     }
 
     function _simulateBatch(address safe_, Batch memory batch_) internal {
-        vm.prank(safe_);
         require(batch_.to.code.length > 0, "No code at address");
-        (bool success, bytes memory data) = batch_.to.delegatecall(batch_.data);
-
-        if (!success) revert(string(data));
+        vm.allowCheatcodes(safe_);
+        (bool success, bytes memory data) = delegatePrank(safe_, batch_.to, batch_.data);
+        if (success) {
+            console2.log("Batch simulated successfully");
+        } else {
+            revert(string(data));
+        }
     }
 
 
