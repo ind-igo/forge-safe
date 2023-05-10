@@ -14,7 +14,7 @@ contract TestAuthBatch is BatchScript {
     address deployer = 0x1A5309F208f161a393E8b5A253de8Ab894A67188;
 
     /// @notice The main script entrypoint
-    function run() external {
+    function run(bool send_) external {
         IRolesAdmin rolesAdmin = IRolesAdmin(0x54FfCA586cD1B01E96a5682DF93a55d7Ef91EFF0);
 
         // Start batch
@@ -35,6 +35,6 @@ contract TestAuthBatch is BatchScript {
         addToBatch(address(rolesAdmin), 0, txn2);
 
         // Execute batch
-        executeBatch(safe);
+        executeBatch(safe, send_);
     }
 }

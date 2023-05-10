@@ -24,7 +24,7 @@ contract TestBatch is BatchScript {
     uint16 lzChainId = 10143;
 
     /// @notice The main script entrypoint
-    function run() external {
+    function run(bool send_) external {
         // vm.startBroadcast();
 
         IKernel kernel = IKernel(0xDb7cf68154bd422dF5196D90285ceA057786b4c3);
@@ -50,7 +50,7 @@ contract TestBatch is BatchScript {
         addToBatch(address(bridge), 0, txn2);
 
         // Execute batch
-        executeBatch(safe);
+        executeBatch(safe, send_);
 
         // vm.stopBroadcast();
     }

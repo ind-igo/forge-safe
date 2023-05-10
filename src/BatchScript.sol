@@ -103,11 +103,11 @@ abstract contract BatchScript is Script, DelegatePrank {
         );
     }
 
-    function executeBatch(address safe_) public {
+    function executeBatch(address safe_, bool send_) public {
         Batch memory batch = _createBatch(safe_);
         batch = _signBatch(safe_, batch);
         _simulateBatch(safe_, batch);
-        // _sendBatch(safe_, batch);
+        if (send_) _sendBatch(safe_, batch);
     }
 
     // Internal functions
@@ -254,7 +254,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         // EIP712Domain Field Types
         string[] memory domainTypes = new string[](2);
         string memory t = "domainType0";
-        vm.serializeString(t, 'name', 'verifyingContract');
+        vm.serializeString(t, "name", "verifyingContract");
         domainTypes[0] = vm.serializeString(t, "type", "address");
         t = "domainType1";
         vm.serializeString(t, "name", "chainId");
@@ -323,12 +323,12 @@ abstract contract BatchScript is Script, DelegatePrank {
         p.serialize("domain", domain);
         string memory payload = p.serialize("message", message);
 
-        payload = _stripArrayQuotes(payload);
+        payload = _stripSlashQuotes(payload);
 
         return payload;
     }
 
-    function _stripArrayQuotes(string memory str_) internal returns (string memory) {
+    function _stripSlashQuotes(string memory str_) internal returns (string memory) {
         // Remove slash quotes from string
         string memory command = string.concat("sed 's/",'\\\\"/"',"/g; s/", '\\"', "\\[/\\[/g; s/", '\\]\\"', "/\\]/g; s/", '\\"', "{/{/g; s/", '}\\"', "/}/g;' <<< ");
 
