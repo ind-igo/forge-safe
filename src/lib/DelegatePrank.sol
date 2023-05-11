@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2 <0.9.0;
 
-import { CommonBase } from "forge-std/Common.sol";
-import "forge-std/console.sol";
+import { CommonBase } from "lib/forge-std/src/Common.sol";
+import "lib/forge-std/src/console.sol";
 
 /* 
   Make arbitrary delegatecalls to an implementation contract.
