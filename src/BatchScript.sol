@@ -38,7 +38,7 @@ abstract contract BatchScript is Script, DelegatePrank {
 
     // Hash constants
     // Safe version for this script, hashes below depend on this
-    string public constant VERSION = "1.3.0";
+    string private constant VERSION = "1.3.0";
 
     // keccak256(
     //     "EIP712Domain(uint256 chainId,address verifyingContract)"
@@ -50,17 +50,23 @@ abstract contract BatchScript is Script, DelegatePrank {
     // );
     bytes32 private constant SAFE_TX_TYPEHASH = 0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
 
-    // Deterministic deployment address of the Gnosis Safe Multisend contract.
-    address internal constant SAFE_MULTISEND_ADDRESS_PRI =
-        0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761; // TODO mainnet, goerli, most others
-    address internal constant SAFE_MULTISEND_ADDRESS_SEC =
-        0x998739BFdAAdde7C933B942a68053933098f9EDa; // TODO optimism, some others
+    // Deterministic deployment address of the Gnosis Safe Multisend contract, configured by chain.
+    address private SAFE_MULTISEND_ADDRESS;
 
-    // string internal constant SAFE_API_BASE_URL =
-    //     "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
-    string internal constant SAFE_API_BASE_URL =
-        "https://safe-transaction-goerli.safe.global/api/v1/safes/";
-    string internal constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
+    // Chain ID, configured by chain.
+    uint256 private chainId;
+
+    // Safe API base URL, configured by chain.
+    string private SAFE_API_BASE_URL;
+    string private constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
+
+    // Wallet information
+    bytes32 private walletType;
+    uint256 private mnemonicIndex;
+    bytes32 private privateKey;
+
+    bytes32 private constant LOCAL = keccak256("local");
+    bytes32 private constant LEDGER = keccak256("ledger");
 
     enum Operation {
         CALL,
@@ -104,6 +110,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     function executeBatch(address safe_, bool send_) public {
+        _initialize();
         Batch memory batch = _createBatch(safe_);
         batch = _signBatch(safe_, batch);
         _simulateBatch(safe_, batch);
@@ -111,11 +118,38 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     // Internal functions
+    function _initialize() private {
+        // Set the chain ID
+        Chain memory chain = getChain(vm.envString("CHAIN"));
+        chainId = chain.chainId;
+
+        // Set the Safe API base URL and multisend address based on chain
+        if (chainId == 1) {
+            SAFE_API_BASE_URL = "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
+            SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
+        } else if (chainId == 5) {
+            SAFE_API_BASE_URL = "https://safe-transaction-goerli.safe.global/api/v1/safes/";
+            SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
+        } else {
+            revert("Unsupported chain");
+        }
+        
+        // Load wallet information
+        walletType = keccak256(abi.encodePacked(vm.envString("WALLET_TYPE")));
+        if (walletType == LOCAL) {
+            privateKey = vm.envBytes32("PRIVATE_KEY");
+        } else if (walletType == LEDGER) {
+            mnemonicIndex = vm.envUint("MNEMONIC_INDEX");
+        } else {
+            revert("Unsupported wallet type");
+        }
+    
+    }
 
     // Encodes the stored encoded transactions into a single Multisend transaction
     function _createBatch(address safe_) internal returns (Batch memory batch) {
         // Set initial batch fields
-        batch.to = SAFE_MULTISEND_ADDRESS_PRI;
+        batch.to = SAFE_MULTISEND_ADDRESS;
         batch.value = 0;
         batch.operation = Operation.DELEGATECALL;
 
@@ -146,13 +180,19 @@ abstract contract BatchScript is Script, DelegatePrank {
         // Get the typed data to sign
         string memory typedData = _getTypedData(safe_, batch_);
 
-        // Sign the typed data from the CLI and get the signature
-
+        // Construct the sign command
         string memory commandStart = "~/projects/foundry/target/debug/cast wallet sign ";
-        string memory wallet = string.concat("--private-key ", vm.toString(vm.envBytes("GOV_PRIVATE_KEY")), " ");
-        // string memory wallet = string.concat("--ledger --mnemonic-index ", vm.toString(vm.envUint("MNEMONIC_INDEX")), " ");
+        string memory wallet;
+        if (walletType == LOCAL) {
+            wallet = string.concat("--private-key ", vm.toString(privateKey), " ");
+        } else if (walletType == LEDGER) {
+            wallet = string.concat("--ledger --mnemonic-index ", vm.toString(mnemonicIndex), " ");
+        } else {
+            revert("Unsupported wallet type");
+        }
         string memory commandEnd = "typed-data ";
 
+        // Sign the typed data from the CLI and get the signature
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
@@ -225,7 +265,7 @@ abstract contract BatchScript is Script, DelegatePrank {
                     keccak256(
                         abi.encode(
                             DOMAIN_SEPARATOR_TYPEHASH,
-                            vm.envUint("CHAIN_ID"),
+                            chainId,
                             safe_
                         )
                     ),
@@ -314,7 +354,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         // Create the domain object
         string memory d = "domain";
         d.serialize("verifyingContract", safe_);
-        string memory domain = d.serialize("chainId", vm.envUint("CHAIN_ID"));
+        string memory domain = d.serialize("chainId", chainId);
 
         // Create the payload object
         string memory p = "payload";
@@ -358,7 +398,7 @@ abstract contract BatchScript is Script, DelegatePrank {
 
     function _getSafeAPIEndpoint(
         address safe_
-    ) internal pure returns (string memory) {
+    ) internal view returns (string memory) {
         return
             string.concat(
                 SAFE_API_BASE_URL,
