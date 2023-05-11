@@ -112,9 +112,11 @@ abstract contract BatchScript is Script, DelegatePrank {
     function executeBatch(address safe_, bool send_) public {
         _initialize();
         Batch memory batch = _createBatch(safe_);
-        batch = _signBatch(safe_, batch);
         _simulateBatch(safe_, batch);
-        if (send_) _sendBatch(safe_, batch);
+        if (send_) {
+            batch = _signBatch(safe_, batch);
+            _sendBatch(safe_, batch);
+        } 
     }
 
     // Internal functions
