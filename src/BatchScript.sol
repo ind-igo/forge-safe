@@ -195,7 +195,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         } else {
             revert("Unsupported wallet type");
         }
-        string memory commandEnd = "typed-data ";
+        string memory commandEnd = "--data ";
 
         // Sign the typed data from the CLI and get the signature
         string[] memory inputs = new string[](3);
