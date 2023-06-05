@@ -186,7 +186,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         string memory typedData = _getTypedData(safe_, batch_);
 
         // Construct the sign command
-        string memory commandStart = "~/projects/foundry/target/debug/cast wallet sign ";
+        string memory commandStart = "cast wallet sign ";
         string memory wallet;
         if (walletType == LOCAL) {
             wallet = string.concat("--private-key ", vm.toString(privateKey), " ");
