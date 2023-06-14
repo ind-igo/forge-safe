@@ -5,8 +5,7 @@ pragma solidity >=0.6.2 <0.9.0;
 // Gnosis Safe transaction batching script
 
 // 🧩 MODULES
-//import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "forge-std/Script.sol";
-import "../lib/forge-std/src/Script.sol";
+import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "forge-std/Script.sol";
 
 import {Surl} from "../lib/surl/src/Surl.sol";
 import {DelegatePrank} from "./lib/DelegatePrank.sol";
@@ -40,15 +39,15 @@ abstract contract BatchScript is Script, DelegatePrank {
     // Safe version for this script, hashes below depend on this
     string private constant VERSION = "1.3.0";
 
-    // keccak256(
-    //     "EIP712Domain(uint256 chainId,address verifyingContract)"
-    // );
-    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
+    // keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
+    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH =
+        0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
     // keccak256(
     //     "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
     // );
-    bytes32 private constant SAFE_TX_TYPEHASH = 0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
+    bytes32 private constant SAFE_TX_TYPEHASH =
+        0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
 
     // Deterministic deployment address of the Gnosis Safe Multisend contract, configured by chain.
     address private SAFE_MULTISEND_ADDRESS;
@@ -116,7 +115,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         if (send_) {
             batch = _signBatch(safe_, batch);
             _sendBatch(safe_, batch);
-        } 
+        }
     }
 
     // Internal functions
@@ -138,7 +137,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         } else {
             revert("Unsupported chain");
         }
-        
+
         // Load wallet information
         walletType = keccak256(abi.encodePacked(vm.envString("WALLET_TYPE")));
         if (walletType == LOCAL) {
@@ -148,7 +147,6 @@ abstract contract BatchScript is Script, DelegatePrank {
         } else {
             revert("Unsupported wallet type");
         }
-    
     }
 
     // Encodes the stored encoded transactions into a single Multisend transaction
@@ -164,10 +162,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         for (uint256 i; i < len; ++i) {
             data = bytes.concat(data, encodedTxns[i]);
         }
-        batch.data = abi.encodeWithSignature(
-            "multiSend(bytes)",
-            data
-        );
+        batch.data = abi.encodeWithSignature("multiSend(bytes)", data);
 
         // Batch gas parameters can all be zero and don't need to be set
 
@@ -178,10 +173,10 @@ abstract contract BatchScript is Script, DelegatePrank {
         batch.txHash = _getTransactionHash(safe_, batch);
     }
 
-    function _signBatch(address safe_, Batch memory batch_)
-        internal
-        returns (Batch memory)
-    {
+    function _signBatch(
+        address safe_,
+        Batch memory batch_
+    ) internal returns (Batch memory) {
         // Get the typed data to sign
         string memory typedData = _getTypedData(safe_, batch_);
 
@@ -189,9 +184,17 @@ abstract contract BatchScript is Script, DelegatePrank {
         string memory commandStart = "cast wallet sign ";
         string memory wallet;
         if (walletType == LOCAL) {
-            wallet = string.concat("--private-key ", vm.toString(privateKey), " ");
+            wallet = string.concat(
+                "--private-key ",
+                vm.toString(privateKey),
+                " "
+            );
         } else if (walletType == LEDGER) {
-            wallet = string.concat("--ledger --mnemonic-index ", vm.toString(mnemonicIndex), " ");
+            wallet = string.concat(
+                "--ledger --mnemonic-index ",
+                vm.toString(mnemonicIndex),
+                " "
+            );
         } else {
             revert("Unsupported wallet type");
         }
@@ -201,7 +204,14 @@ abstract contract BatchScript is Script, DelegatePrank {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(commandStart, wallet, commandEnd, "'", typedData, "'");
+        inputs[2] = string.concat(
+            commandStart,
+            wallet,
+            commandEnd,
+            "'",
+            typedData,
+            "'"
+        );
         bytes memory signature = vm.ffi(inputs);
 
         // Set the signature on the batch
@@ -213,14 +223,17 @@ abstract contract BatchScript is Script, DelegatePrank {
     function _simulateBatch(address safe_, Batch memory batch_) internal {
         require(batch_.to.code.length > 0, "No code at address");
         vm.allowCheatcodes(safe_);
-        (bool success, bytes memory data) = delegatePrank(safe_, batch_.to, batch_.data);
+        (bool success, bytes memory data) = delegatePrank(
+            safe_,
+            batch_.to,
+            batch_.data
+        );
         if (success) {
             console2.log("Batch simulated successfully");
         } else {
             revert(string(data));
         }
     }
-
 
     function _sendBatch(address safe_, Batch memory batch_) internal {
         string memory endpoint = _getSafeAPIEndpoint(safe_);
@@ -243,7 +256,10 @@ abstract contract BatchScript is Script, DelegatePrank {
         string memory payload = placeholder.serialize("sender", msg.sender);
 
         // Send batch
-        (uint256 status, ) = endpoint.post(_getHeaders(), payload);
+        (uint256 status, bytes memory data) = endpoint.post(
+            _getHeaders(),
+            payload
+        );
 
         if (status == 201) {
             console2.log("Batch sent successfully");
@@ -265,11 +281,7 @@ abstract contract BatchScript is Script, DelegatePrank {
                 abi.encodePacked(
                     hex"1901",
                     keccak256(
-                        abi.encode(
-                            DOMAIN_SEPARATOR_TYPEHASH,
-                            chainId,
-                            safe_
-                        )
+                        abi.encode(DOMAIN_SEPARATOR_TYPEHASH, chainId, safe_)
                     ),
                     keccak256(
                         abi.encode(
@@ -290,7 +302,10 @@ abstract contract BatchScript is Script, DelegatePrank {
             );
     }
 
-    function _getTypedData(address safe_, Batch memory batch_) internal returns (string memory) {
+    function _getTypedData(
+        address safe_,
+        Batch memory batch_
+    ) internal returns (string memory) {
         // Create EIP712 structured data for the batch transaction to sign externally via cast
 
         // EIP712Domain Field Types
@@ -370,16 +385,30 @@ abstract contract BatchScript is Script, DelegatePrank {
         return payload;
     }
 
-    function _stripSlashQuotes(string memory str_) internal returns (string memory) {
+    function _stripSlashQuotes(
+        string memory str_
+    ) internal returns (string memory) {
         // Remove slash quotes from string
-        string memory command = string.concat("sed 's/",'\\\\"/"',"/g; s/", '\\"', "\\[/\\[/g; s/", '\\]\\"', "/\\]/g; s/", '\\"', "{/{/g; s/", '}\\"', "/}/g;' <<< ");
+        string memory command = string.concat(
+            "sed 's/",
+            '\\\\"/"',
+            "/g; s/",
+            '\\"',
+            "\\[/\\[/g; s/",
+            '\\]\\"',
+            "/\\]/g; s/",
+            '\\"',
+            "{/{/g; s/",
+            '}\\"',
+            "/}/g;' <<< "
+        );
 
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = string.concat(command, "'", str_, "'");
         bytes memory res = vm.ffi(inputs);
-        
+
         return string(res);
     }
 
