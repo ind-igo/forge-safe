@@ -139,14 +139,10 @@ abstract contract BatchScript is Script {
         payload = payload.serialize("sender", msg.sender);
 
         // Send batch
-        (uint256 status, bytes memory data) = endpoint.post(
-            _getHeaders(),
-            payload
-        );
+        (uint256 status, ) = endpoint.post(_getHeaders(), payload);
 
         if (status == 201) {
             console2.log("Batch sent successfully");
-            //console2.log(data);
         } else {
             revert("Send batch failed!");
         }
