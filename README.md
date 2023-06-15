@@ -26,8 +26,9 @@ Steps:
 2. Import `BatchScript.sol` into your Forge script
 3. Call `addToBatch()` for each encoded call
 4. After all encoded txs have been added, call `executeBatch()` with your Safe address and whether to send the transaction
-5. ???
-6. Profit
+5. Sign the batch data
+6. ???
+7. Profit
 
 ```js
 import {BatchScript} from "forge-safe/BatchScript.sol";
