@@ -6,6 +6,12 @@ The goal of this tool is to allow users to quickly build, validate and version c
 
 Inspired by [ape-safe](https://github.com/banteg/ape-safe) and Olymsig
 
+## Supported Chains
+
+Only supports Mainnet, Goerli and Arbitrum currently. If you'd like more to be supported, please make a PR.
+
+The only chains supported by Gnosis Safe API can be found [here](https://docs.safe.global/learn/safe-core/safe-core-api/available-services#safe-transaction-service).
+
 ## Installation
 
 ```forge install ind-igo/forge-safe```
