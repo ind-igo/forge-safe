@@ -47,7 +47,7 @@ contract TestBatch is BatchScript {
             lzChainId,
             abi.encodePacked(remoteBridgeAddr, localBridgeAddr)
         );
-        addToBatch(address(bridge), 0, txn2);
+        addToBatch(address(bridge), txn2);
 
         // Execute batch
         executeBatch(safe, send_);

@@ -95,7 +95,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     // Encodes the transaction as packed bytes of:
     // - `operation` as a `uint8` with `0` for a `call` or `1` for a `delegatecall` (=> 1 byte),
     // - `to` as an `address` (=> 20 bytes),
-    // - `value` as a `uint256` (=> 32 bytes),
+    // - `value` as in msg.value, sent as a `uint256` (=> 32 bytes),
     // -  length of `data` as a `uint256` (=> 32 bytes),
     // - `data` as `bytes`.
     function addToBatch(
@@ -108,6 +108,22 @@ abstract contract BatchScript is Script, DelegatePrank {
         );
     }
 
+    // Convenience funtion to add an encoded transaction to the batch, but passes
+    // 0 as the `value` (equivalent to msg.value) field.
+    function addToBatch(address to_, bytes memory data_) public {
+        encodedTxns.push(
+            abi.encodePacked(
+                Operation.CALL,
+                to_,
+                uint256(0),
+                data_.length,
+                data_
+            )
+        );
+    }
+
+    // Simulate then send the batch to the Safe API. If `send_` is `false`, the
+    // batch will only be simulated.
     function executeBatch(address safe_, bool send_) public {
         _initialize();
         Batch memory batch = _createBatch(safe_);
