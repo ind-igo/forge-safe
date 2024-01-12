@@ -147,6 +147,9 @@ abstract contract BatchScript is Script, DelegatePrank {
         } else if (chainId == 5) {
             SAFE_API_BASE_URL = "https://safe-transaction-goerli.safe.global/api/v1/safes/";
             SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
+        } else if (chainId == 8453) {
+            SAFE_API_BASE_URL = "https://safe-transaction-base.safe.global/api/v1/safes/";
+            SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
         } else if (chainId == 42161) {
             SAFE_API_BASE_URL = "https://safe-transaction-arbitrum.safe.global/api/v1/safes/";
             SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
