@@ -134,6 +134,19 @@ abstract contract BatchScript is Script, DelegatePrank {
         }
     }
 
+    // Convenience function to execute a batch with a specific nonce. This is useful
+    // when there is pending transactions on the Safe that not to be replaced.
+    function executeBatch(address safe_, bool send_, uint256 nonce_) public {
+        _initialize();
+        Batch memory batch = _createBatch(safe_);
+        _simulateBatch(safe_, batch);
+        batch.nonce = nonce_;
+        if (send_) {
+            batch = _signBatch(safe_, batch);
+            _sendBatch(safe_, batch);
+        }
+    }
+
     // Internal functions
     function _initialize() private {
         // Set the chain ID
