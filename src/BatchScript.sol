@@ -63,9 +63,12 @@ abstract contract BatchScript is Script, DelegatePrank {
     bytes32 private walletType;
     uint256 private mnemonicIndex;
     bytes32 private privateKey;
+    string private account;
+    string private passwordFile;
 
     bytes32 private constant LOCAL = keccak256("local");
     bytes32 private constant LEDGER = keccak256("ledger");
+    bytes32 private constant KEYSTORE = keccak256("keystore");
 
     enum Operation {
         CALL,
@@ -168,6 +171,9 @@ abstract contract BatchScript is Script, DelegatePrank {
             privateKey = vm.envBytes32("PRIVATE_KEY");
         } else if (walletType == LEDGER) {
             mnemonicIndex = vm.envUint("MNEMONIC_INDEX");
+        } else if (walletType == KEYSTORE) {
+            account = vm.envString("ACCOUNT");
+            passwordFile = vm.envString("PASSWORD_FILE");
         } else {
             revert("Unsupported wallet type");
         }
@@ -219,6 +225,8 @@ abstract contract BatchScript is Script, DelegatePrank {
                 vm.toString(mnemonicIndex),
                 " "
             );
+        } else if (walletType == KEYSTORE) {
+            wallet = string.concat("--account ", account, " --password-file ", passwordFile, " ");
         } else {
             revert("Unsupported wallet type");
         }
@@ -302,28 +310,28 @@ abstract contract BatchScript is Script, DelegatePrank {
     ) internal view returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(
-                    hex"1901",
+            abi.encodePacked(
+                hex"1901",
                     keccak256(
                         abi.encode(DOMAIN_SEPARATOR_TYPEHASH, chainId, safe_)
                     ),
-                    keccak256(
-                        abi.encode(
-                            SAFE_TX_TYPEHASH,
-                            batch_.to,
-                            batch_.value,
-                            keccak256(batch_.data),
-                            batch_.operation,
-                            batch_.safeTxGas,
-                            batch_.baseGas,
-                            batch_.gasPrice,
-                            address(0),
-                            address(0),
-                            batch_.nonce
-                        )
+                keccak256(
+                    abi.encode(
+                        SAFE_TX_TYPEHASH,
+                        batch_.to,
+                        batch_.value,
+                        keccak256(batch_.data),
+                        batch_.operation,
+                        batch_.safeTxGas,
+                        batch_.baseGas,
+                        batch_.gasPrice,
+                        address(0),
+                        address(0),
+                        batch_.nonce
                     )
                 )
-            );
+            )
+        );
     }
 
     function _getTypedData(
