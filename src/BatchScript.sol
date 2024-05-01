@@ -59,14 +59,6 @@ abstract contract BatchScript is Script, DelegatePrank {
     string private SAFE_API_BASE_URL;
     string private constant SAFE_API_MULTISIG_SEND = "/multisig-transactions/";
 
-    // Wallet information
-    bytes32 private walletType;
-    uint256 private mnemonicIndex;
-    bytes32 private privateKey;
-
-    bytes32 private constant LOCAL = keccak256("local");
-    bytes32 private constant LEDGER = keccak256("ledger");
-
     enum Operation {
         CALL,
         DELEGATECALL
@@ -129,7 +121,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         Batch memory batch = _createBatch(safe_);
         _simulateBatch(safe_, batch);
         if (send_) {
-            batch = _signBatch(safe_, batch);
+            batch = _signBatch(batch);
             _sendBatch(safe_, batch);
         }
     }
@@ -137,9 +129,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     // Internal functions
     function _initialize() private {
         // Set the chain ID
-        Chain memory chain = getChain(vm.envString("CHAIN"));
-        chainId = chain.chainId;
-
+        chainId = block.chainid;
         // Set the Safe API base URL and multisend address based on chain
         if (chainId == 1) {
             SAFE_API_BASE_URL = "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
@@ -156,16 +146,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         } else {
             revert("Unsupported chain");
         }
-
-        // Load wallet information
-        walletType = keccak256(abi.encodePacked(vm.envString("WALLET_TYPE")));
-        if (walletType == LOCAL) {
-            privateKey = vm.envBytes32("PRIVATE_KEY");
-        } else if (walletType == LEDGER) {
-            mnemonicIndex = vm.envUint("MNEMONIC_INDEX");
-        } else {
-            revert("Unsupported wallet type");
-        }
+        console2.log("Using Signer:", msg.sender);
     }
 
     // Encodes the stored encoded transactions into a single Multisend transaction
@@ -193,49 +174,12 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     function _signBatch(
-        address safe_,
         Batch memory batch_
-    ) internal returns (Batch memory) {
-        // Get the typed data to sign
-        string memory typedData = _getTypedData(safe_, batch_);
-
-        // Construct the sign command
-        string memory commandStart = "cast wallet sign ";
-        string memory wallet;
-        if (walletType == LOCAL) {
-            wallet = string.concat(
-                "--private-key ",
-                vm.toString(privateKey),
-                " "
-            );
-        } else if (walletType == LEDGER) {
-            wallet = string.concat(
-                "--ledger --mnemonic-index ",
-                vm.toString(mnemonicIndex),
-                " "
-            );
-        } else {
-            revert("Unsupported wallet type");
-        }
-        string memory commandEnd = "--data ";
-
-        // Sign the typed data from the CLI and get the signature
-        string[] memory inputs = new string[](3);
-        inputs[0] = "bash";
-        inputs[1] = "-c";
-        inputs[2] = string.concat(
-            commandStart,
-            wallet,
-            commandEnd,
-            "'",
-            typedData,
-            "'"
-        );
-        bytes memory signature = vm.ffi(inputs);
-
+    ) internal pure returns (Batch memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(batch_.txHash);
         // Set the signature on the batch
+        bytes memory signature = abi.encodePacked(r, s, v);
         batch_.signature = signature;
-
         return batch_;
     }
 
@@ -319,116 +263,6 @@ abstract contract BatchScript is Script, DelegatePrank {
                     )
                 )
             );
-    }
-
-    function _getTypedData(
-        address safe_,
-        Batch memory batch_
-    ) internal returns (string memory) {
-        // Create EIP712 structured data for the batch transaction to sign externally via cast
-
-        // EIP712Domain Field Types
-        string[] memory domainTypes = new string[](2);
-        string memory t = "domainType0";
-        vm.serializeString(t, "name", "verifyingContract");
-        domainTypes[0] = vm.serializeString(t, "type", "address");
-        t = "domainType1";
-        vm.serializeString(t, "name", "chainId");
-        domainTypes[1] = vm.serializeString(t, "type", "uint256");
-
-        // SafeTx Field Types
-        string[] memory txnTypes = new string[](10);
-        t = "txnType0";
-        vm.serializeString(t, "name", "to");
-        txnTypes[0] = vm.serializeString(t, "type", "address");
-        t = "txnType1";
-        vm.serializeString(t, "name", "value");
-        txnTypes[1] = vm.serializeString(t, "type", "uint256");
-        t = "txnType2";
-        vm.serializeString(t, "name", "data");
-        txnTypes[2] = vm.serializeString(t, "type", "bytes");
-        t = "txnType3";
-        vm.serializeString(t, "name", "operation");
-        txnTypes[3] = vm.serializeString(t, "type", "uint8");
-        t = "txnType4";
-        vm.serializeString(t, "name", "safeTxGas");
-        txnTypes[4] = vm.serializeString(t, "type", "uint256");
-        t = "txnType5";
-        vm.serializeString(t, "name", "baseGas");
-        txnTypes[5] = vm.serializeString(t, "type", "uint256");
-        t = "txnType6";
-        vm.serializeString(t, "name", "gasPrice");
-        txnTypes[6] = vm.serializeString(t, "type", "uint256");
-        t = "txnType7";
-        vm.serializeString(t, "name", "gasToken");
-        txnTypes[7] = vm.serializeString(t, "type", "address");
-        t = "txnType8";
-        vm.serializeString(t, "name", "refundReceiver");
-        txnTypes[8] = vm.serializeString(t, "type", "address");
-        t = "txnType9";
-        vm.serializeString(t, "name", "nonce");
-        txnTypes[9] = vm.serializeString(t, "type", "uint256");
-
-        // Create the top level types object
-        t = "topLevelTypes";
-        t.serialize("EIP712Domain", domainTypes);
-        string memory types = t.serialize("SafeTx", txnTypes);
-
-        // Create the message object
-        string memory m = "message";
-        m.serialize("to", batch_.to);
-        m.serialize("value", batch_.value);
-        m.serialize("data", batch_.data);
-        m.serialize("operation", uint256(batch_.operation));
-        m.serialize("safeTxGas", batch_.safeTxGas);
-        m.serialize("baseGas", batch_.baseGas);
-        m.serialize("gasPrice", batch_.gasPrice);
-        m.serialize("gasToken", address(0));
-        m.serialize("refundReceiver", address(0));
-        string memory message = m.serialize("nonce", batch_.nonce);
-
-        // Create the domain object
-        string memory d = "domain";
-        d.serialize("verifyingContract", safe_);
-        string memory domain = d.serialize("chainId", chainId);
-
-        // Create the payload object
-        string memory p = "payload";
-        p.serialize("types", types);
-        vm.serializeString(p, "primaryType", "SafeTx");
-        p.serialize("domain", domain);
-        string memory payload = p.serialize("message", message);
-
-        payload = _stripSlashQuotes(payload);
-
-        return payload;
-    }
-
-    function _stripSlashQuotes(
-        string memory str_
-    ) internal returns (string memory) {
-        // Remove slash quotes from string
-        string memory command = string.concat(
-            "sed 's/",
-            '\\\\"/"',
-            "/g; s/",
-            '\\"',
-            "\\[/\\[/g; s/",
-            '\\]\\"',
-            "/\\]/g; s/",
-            '\\"',
-            "{/{/g; s/",
-            '}\\"',
-            "/}/g;' <<< "
-        );
-
-        string[] memory inputs = new string[](3);
-        inputs[0] = "bash";
-        inputs[1] = "-c";
-        inputs[2] = string.concat(command, "'", str_, "'");
-        bytes memory res = vm.ffi(inputs);
-
-        return string(res);
     }
 
     function _getNonce(address safe_) internal returns (uint256) {
