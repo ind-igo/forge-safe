@@ -20,12 +20,10 @@ interface IKernel {
 contract TestBatch is BatchScript {
     address localBridgeAddr = 0xefffab0Aa61828c4af926E039ee754e3edE10dAc; // Goerli bridge
     address remoteBridgeAddr = 0xB01432c01A9128e3d1d70583eA873477B2a1f5e1; // Arb goerli bridge
-    address safe = 0x84C0C005cF574D0e5C602EA7b366aE9c707381E0;
     uint16 lzChainId = 10143;
 
     /// @notice The main script entrypoint
-    function run(bool send_) external {
-        // vm.startBroadcast();
+    function run(bool send_) external isBatch(0x84C0C005cF574D0e5C602EA7b366aE9c707381E0) {
 
         IKernel kernel = IKernel(0xDb7cf68154bd422dF5196D90285ceA057786b4c3);
         ICrossChainBridge bridge = ICrossChainBridge(localBridgeAddr);
@@ -50,8 +48,6 @@ contract TestBatch is BatchScript {
         addToBatch(address(bridge), txn2);
 
         // Execute batch
-        executeBatch(safe, send_);
-
-        // vm.stopBroadcast();
+        executeBatch(send_);
     }
 }
