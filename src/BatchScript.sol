@@ -111,6 +111,9 @@ abstract contract BatchScript is Script {
         } else if (chainId == 43114) {
             SAFE_API_BASE_URL = "https://safe-transaction-avalanche.safe.global/api/v1/safes/";
             SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
+        } else if (chainId == 11155111) {
+            SAFE_API_BASE_URL = "https://safe-transaction-sepolia.safe.global/api/v1/safes/";
+            SAFE_MULTISEND_ADDRESS = 0x998739BFdAAdde7C933B942a68053933098f9EDa;
         } else {
             revert("Unsupported chain");
         }
