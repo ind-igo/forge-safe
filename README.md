@@ -10,7 +10,7 @@ Inspired by [ape-safe](https://github.com/banteg/ape-safe) and Olymsig
 
 Only supports Mainnet, Goerli and Arbitrum currently. If you'd like more to be supported, please make a PR.
 
-The only chains supported by Gnosis Safe API can be found [here](https://docs.safe.global/learn/safe-core/safe-core-api/available-services#safe-transaction-service).
+The only chains supported by Gnosis Safe API can be found [here](https://docs.safe.global/advanced/api-supported-networks).
 
 ## Installation
 
