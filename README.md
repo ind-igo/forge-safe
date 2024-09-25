@@ -24,18 +24,20 @@ Steps:
     - Set `CHAIN` to the name of the chain your Safe is on
     - Set `WALLET_TYPE` with `LOCAL` or `LEDGER` depending on your wallet
 2. Import `BatchScript.sol` into your Forge script
-3. Call `addToBatch()` for each encoded call
-4. After all encoded txs have been added, call `executeBatch()` with your Safe address and whether to send the transaction
-5. Sign the batch data
-6. ???
-7. Profit
+3. add isBatch({SAFE_ADDRESS}) modifier to `function run()`
+4. Call `addToBatch()` for each encoded call
+5. After all encoded txs have been added, call `executeBatch()` with your Safe address and whether to send the transaction
+6. Sign the batch data
+7. ???
+8. Profit
 
 ```js
 import {BatchScript} from "forge-safe/BatchScript.sol";
 
 ...
-
-function run(bool send_) public {
+contract TestScript is BatchScript {
+...
+function run(bool send_) public isBatch(safe) {
         string memory gm = "gm";
         address greeter = 0x1111;
 
@@ -45,6 +47,6 @@ function run(bool send_) public {
         );
         addToBatch(greeter, 0, txn);
 
-        executeBatch(safe, send_);
+        executeBatch(send_);
 }
 ```
