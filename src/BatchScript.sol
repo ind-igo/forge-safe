@@ -89,8 +89,13 @@ abstract contract BatchScript is Script {
         chainId = block.chainid;
 
         // Set the Safe API base URL and multisend address based on chain
+        // Source of truth for urls: https://docs.safe.global/advanced/api-supported-networks
+        // Source of truth for addresses https://docs.safe.global/advanced/smart-account-supported-networks/v1.3.0
         if (chainId == 1) {
             SAFE_API_BASE_URL = "https://safe-transaction-mainnet.safe.global/api/v1/safes/";
+            SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
+        } else if (chainId == 56) {
+            SAFE_API_BASE_URL = "https://safe-transaction-bsc.safe.global/api/v1/safes/";
             SAFE_MULTISEND_ADDRESS = 0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761;
         } else if (chainId == 137) {
             SAFE_API_BASE_URL = "https://safe-transaction-polygon.safe.global/api/v1/safes/";
