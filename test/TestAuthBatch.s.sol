@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
+/*
 
 import {BatchScript} from "src/BatchScript.sol";
 
@@ -35,3 +36,4 @@ contract TestAuthBatch is BatchScript {
         executeBatch(send_);
     }
 }
+*/

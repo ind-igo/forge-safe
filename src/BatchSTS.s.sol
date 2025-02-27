@@ -7,10 +7,11 @@ pragma solidity >=0.6.2 <0.9.0;
 // 🧩 MODULES
 import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "forge-std/Script.sol";
 
-import {Surl} from "../lib/surl/src/Surl.sol";
+import {Surl} from "dep/Surl.sol";
 
-// ⭐️ SCRIPT
-abstract contract BatchScript is Script {
+/// @title BatchSTSScript
+/// @notice A script for creating and executing Gnosis Safe batch transactions via the Safe Transaction Service API
+abstract contract BatchSTSScript is Script {
     using stdJson for string;
     using Surl for *;
 

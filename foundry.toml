@@ -8,8 +8,7 @@ auto_detect_solc = false
 optimizer_runs = 1_000
 remappings = [
     'ds-test/=lib/ds-test/src/',
-    'forge-std/=lib/forge-std/src',
-    'solmate/=lib/solmate/src',
-    'surl/=lib/surl/src',
+    'forge-std/=lib/forge-std/src'
 ]
 ffi = true
+fs_permissions = [{ access = "read-write", path = "./"}]
